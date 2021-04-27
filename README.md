@@ -1,5 +1,6 @@
 Lab 6 Comparing means
 ================
+Lukas Robinson
 2021-04-27
 
 Fill out this report and submit it as your completed assignment.
@@ -22,12 +23,76 @@ The data is provided in your GitHub repository.
 For each question below, write a sentence answering the question and
 show the code you used to come up with the answer, if applicable.
 
+load packages & read data sets
+
+``` r
+library(tidyverse)
+```
+
+    ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──
+
+    ## ✓ ggplot2 3.3.3     ✓ purrr   0.3.4
+    ## ✓ tibble  3.0.4     ✓ dplyr   1.0.2
+    ## ✓ tidyr   1.1.2     ✓ stringr 1.4.0
+    ## ✓ readr   1.4.0     ✓ forcats 0.5.0
+
+    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+    ## x dplyr::filter() masks stats::filter()
+    ## x dplyr::lag()    masks stats::lag()
+
+``` r
+fish <- read_csv("chap12q19ElectricFish.csv")
+```
+
+    ## 
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## cols(
+    ##   tributary = col_character(),
+    ##   speciesUpstream = col_double(),
+    ##   speciesDownstream = col_double()
+    ## )
+
+``` r
+crabs <- read_csv("chap15q27FiddlerCrabFans.csv")
+```
+
+    ## 
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## cols(
+    ##   crabType = col_character(),
+    ##   bodyTemperature = col_double()
+    ## )
+
+``` r
+fish_long <- 
+  pivot_longer(fish, speciesUpstream:speciesDownstream,
+               names_to = "location",
+               values_to = "species") %>% 
+  mutate(location = str_remove(location, c("species")))
+```
+
 ### Question A
 
 > Test the hypothesis that the tributaries have no effect on the number
 > of species of electric fish.
 
-ANSWER
+``` r
+t.test(formula = species ~ location, data = fish_long)
+```
+
+    ## 
+    ##  Welch Two Sample t-test
+    ## 
+    ## data:  species by location
+    ## t = 0.59249, df = 21.81, p-value = 0.5596
+    ## alternative hypothesis: true difference in means is not equal to 0
+    ## 95 percent confidence interval:
+    ##  -4.587031  8.253697
+    ## sample estimates:
+    ## mean in group Downstream   mean in group Upstream 
+    ##                 16.41667                 14.58333
+
+The p-value is greater than 0.5 so we are accepting the null hypothesis.
 
 ### Question B
 
@@ -35,7 +100,8 @@ ANSWER
 > upstream and downstream of a tributary? What is the 95% confidence
 > interval of this difference in means?
 
-ANSWER
+The mean difference is 1.83334 and the 95% confidence interval of this
+difference in means is -4.587031 and 8.253697.
 
 ### Question C
 
@@ -43,7 +109,28 @@ ANSWER
 > (B). Create a graph to assess whether one of those assumptions was
 > met.
 
-ANSWER
+The assumptions of a t-test is the sampling units are randomly sampled
+from populations and the paired differences have a normal distribution
+in populations. The paired differences can be tested by creating a
+histogram of the two populations. This histogram then shows that the
+data does have characteristics of a normal distribution in the sample
+size fo 12 samples per location.
+
+``` r
+fish_long %>% 
+  ggplot(aes(x = species)) +
+  geom_histogram(
+    aes(fill = location),
+    bins = 8,
+    alpha = 0.5,
+    position = "identity"
+  ) +
+  scale_fill_manual(values = c("red", "cyan2")) +
+  theme_minimal() +
+  facet_wrap( ~ location)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ## ANOVA
 
@@ -67,9 +154,47 @@ all crabs are provided in the accompanying data file.
 
 ### Question D
 
-Graph the distribution of body temperatures for each crab type:
+> Graph the distribution of body temperatures for each crab type:
+
+``` r
+crabs %>% 
+  filter(!is.na(crabType)) %>% 
+  ggplot(aes(x = bodyTemperature)) +
+  geom_histogram(
+    aes(fill = crabType),
+    bins = 8,
+    alpha = 0.5,
+    position = "identity"
+  ) +
+  facet_wrap( ~ crabType, ncol = 1)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ### Question E
 
-Does body temperature varies among crab types? State the null and
-alternative hypothesis, conduct and ANOVA, and interpret the results.
+> Does body temperature vary among crab types? State the null and
+> alternative hypothesis, conduct and ANOVA, and interpret the results.
+>
+> HO: The body temperature is equal among all crab types
+>
+> HA: At least one crab type is different from the others
+
+``` r
+aov_crab <-
+  aov(bodyTemperature ~ crabType, data = crabs)
+
+summary(aov_crab)
+```
+
+    ##             Df Sum Sq Mean Sq F value Pr(>F)    
+    ## crabType     3  2.641  0.8804   20.31  7e-10 ***
+    ## Residuals   80  3.468  0.0433                   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 1 observation deleted due to missingness
+
+The ANOVA results that the F value is greater than one and this means we
+are going to support the alternative hypothesis. The p-value is less
+than 0.5 which means we are rejecting the null hypothesis meaning there
+is at least one crab type different from the others.
